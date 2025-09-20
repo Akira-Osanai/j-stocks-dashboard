@@ -17,6 +17,7 @@ from data.loader import StockDataLoader
 from components.charts import StockChart
 from components.financial_analysis import FinancialAnalysis
 from components.dividend_analysis import DividendAnalysis
+from components.news_sentiment_analysis import NewsSentimentAnalysis
 
 # ページ設定
 st.set_page_config(
@@ -123,7 +124,7 @@ def main():
     # メインコンテンツ
     if selected_ticker:
         # タブを作成
-        tab1, tab2, tab3 = st.tabs(["📈 株価分析", "💰 財務分析", "💎 配当分析"])
+        tab1, tab2, tab3, tab4 = st.tabs(["📈 株価分析", "💰 財務分析", "💎 配当分析", "📰 ニュース分析"])
         
         with tab1:
             # データの完全性をチェック
@@ -414,6 +415,87 @@ def main():
                 if dividend_analysis is not None and not dividend_analysis.empty:
                     st.markdown("**配当分析**")
                     st.dataframe(dividend_analysis, width='stretch', height=300)
+        
+        with tab4:
+            # ニュース分析タブ
+            st.markdown("### 📰 ニュース・センチメント分析")
+            
+            # ニュースデータを読み込み
+            with st.spinner("ニュースデータを読み込み中..."):
+                news_data = data_loader.load_news_data(selected_ticker)
+                news_analysis = data_loader.load_news_analysis(selected_ticker)
+            
+            # データ品質の表示
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                NewsSentimentAnalysis.display_data_quality_warning(news_data, "ニュースデータ")
+            
+            with col2:
+                NewsSentimentAnalysis.display_data_quality_warning(news_analysis, "ニュース分析")
+            
+            # ニュースサマリー
+            if news_analysis is not None and not news_analysis.empty:
+                st.markdown("#### 📊 ニュースサマリー")
+                NewsSentimentAnalysis.display_news_summary(news_analysis, news_data)
+            
+            # センチメント概要チャート
+            if news_analysis is not None and not news_analysis.empty:
+                st.markdown("#### 🎯 センチメント概要")
+                sentiment_overview_chart = NewsSentimentAnalysis.create_sentiment_overview_chart(
+                    news_analysis,
+                    title=f"{selected_ticker} センチメント概要",
+                    height=400
+                )
+                st.plotly_chart(sentiment_overview_chart, use_container_width=True)
+            
+            # センチメントスコア
+            if news_analysis is not None and not news_analysis.empty:
+                st.markdown("#### 📈 センチメントスコア")
+                sentiment_score_chart = NewsSentimentAnalysis.create_sentiment_score_chart(
+                    news_analysis,
+                    title=f"{selected_ticker} センチメントスコア",
+                    height=300
+                )
+                st.plotly_chart(sentiment_score_chart, use_container_width=True)
+            
+            # センチメント推移
+            if news_data is not None and not news_data.empty:
+                st.markdown("#### 📅 センチメント推移")
+                sentiment_timeline_chart = NewsSentimentAnalysis.create_sentiment_timeline_chart(
+                    news_data,
+                    title=f"{selected_ticker} センチメント推移",
+                    height=500
+                )
+                st.plotly_chart(sentiment_timeline_chart, use_container_width=True)
+            
+            # ニュースソース分析
+            if news_data is not None and not news_data.empty:
+                st.markdown("#### 📰 ニュースソース分析")
+                news_source_chart = NewsSentimentAnalysis.create_news_source_chart(
+                    news_data,
+                    title=f"{selected_ticker} ニュースソース分析",
+                    height=400
+                )
+                st.plotly_chart(news_source_chart, use_container_width=True)
+            
+            # ニュース一覧
+            if news_data is not None and not news_data.empty:
+                NewsSentimentAnalysis.display_news_list(news_data, max_news=10)
+            
+            # ニュースデータの詳細表示
+            with st.expander("📋 ニュースデータ詳細"):
+                if news_data is not None and not news_data.empty:
+                    st.markdown("**ニュースデータ**")
+                    # パースされたコンテンツを表示用に整理
+                    display_data = news_data.copy()
+                    if 'parsed_content' in display_data.columns:
+                        display_data = display_data.drop('parsed_content', axis=1)
+                    st.dataframe(display_data, width='stretch', height=300)
+                
+                if news_analysis is not None and not news_analysis.empty:
+                    st.markdown("**ニュース分析**")
+                    st.dataframe(news_analysis, width='stretch', height=300)
     
     else:
         st.info("サイドバーから銘柄を選択してください")

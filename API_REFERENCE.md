@@ -90,6 +90,22 @@ def load_dividend_analysis(self, ticker: str) -> Optional[pd.DataFrame]
   - `ticker` (str): 銘柄コード
 - **戻り値**: 配当分析のDataFrame
 
+```python
+def load_news_data(self, ticker: str) -> Optional[pd.DataFrame]
+```
+- **説明**: ニュースデータを読み込み
+- **パラメータ**:
+  - `ticker` (str): 銘柄コード
+- **戻り値**: ニュースデータのDataFrame（id, content列を含む）
+
+```python
+def load_news_analysis(self, ticker: str) -> Optional[pd.DataFrame]
+```
+- **説明**: ニュース分析データを読み込み
+- **パラメータ**:
+  - `ticker` (str): 銘柄コード
+- **戻り値**: ニュース分析のDataFrame
+
 #### ユーティリティメソッド
 
 ```python
@@ -378,3 +394,89 @@ date,dividend,ticker,year
 - チャートの色は`colors`配列で定義
 - レイアウトは`fig.update_layout()`で設定
 - テンプレートは`template="plotly_white"`で統一
+
+## 5. NewsSentimentAnalysis クラス
+
+### 概要
+ニュース・センチメント分析を表示するクラス
+
+### メソッド
+
+#### create_sentiment_overview_chart(news_analysis, title, height)
+センチメント概要の円グラフを作成
+
+**パラメータ:**
+- `news_analysis` (pd.DataFrame): ニュース分析データのDataFrame
+- `title` (str): チャートのタイトル
+- `height` (int): チャートの高さ
+
+**戻り値:**
+- `go.Figure`: PlotlyのFigureオブジェクト
+
+#### create_sentiment_timeline_chart(news_data, title, height)
+センチメントの時系列推移を表示
+
+**パラメータ:**
+- `news_data` (pd.DataFrame): ニュースデータのDataFrame
+- `title` (str): チャートのタイトル
+- `height` (int): チャートの高さ
+
+**戻り値:**
+- `go.Figure`: PlotlyのFigureオブジェクト
+
+#### create_news_source_chart(news_data, title, height)
+ニュースソースの分析チャートを作成
+
+**パラメータ:**
+- `news_data` (pd.DataFrame): ニュースデータのDataFrame
+- `title` (str): チャートのタイトル
+- `height` (int): チャートの高さ
+
+**戻り値:**
+- `go.Figure`: PlotlyのFigureオブジェクト
+
+#### create_sentiment_score_chart(news_analysis, title, height)
+センチメントスコアの表示
+
+**パラメータ:**
+- `news_analysis` (pd.DataFrame): ニュース分析データのDataFrame
+- `title` (str): チャートのタイトル
+- `height` (int): チャートの高さ
+
+**戻り値:**
+- `go.Figure`: PlotlyのFigureオブジェクト
+
+#### display_news_summary(news_analysis, news_data)
+ニュースサマリー情報を表示
+
+**パラメータ:**
+- `news_analysis` (pd.DataFrame): ニュース分析データのDataFrame
+- `news_data` (pd.DataFrame): ニュースデータのDataFrame
+
+#### display_news_list(news_data, max_news)
+ニュース一覧を表示
+
+**パラメータ:**
+- `news_data` (pd.DataFrame): ニュースデータのDataFrame
+- `max_news` (int): 表示する最大ニュース数
+
+#### display_data_quality_warning(df, data_type)
+データ品質の警告を表示
+
+**パラメータ:**
+- `df` (pd.DataFrame): データのDataFrame
+- `data_type` (str): データの種類
+
+### ニュースデータの構造
+
+#### ニュースデータ（news_data.csv）
+```csv
+id,content
+d4f7ffb7-e65a-359e-b390-916f10bef293,"{'id': 'd4f7ffb7-e65a-359e-b390-916f10bef293', 'contentType': 'STORY', 'title': 'Sanrio (TSE:8136): Evaluating Valuation After Strong Share Price Momentum', 'summary': '...', 'pubDate': '2025-09-10T11:13:45Z', 'provider': {'displayName': 'Simply Wall St.'}, ...}"
+```
+
+#### ニュース分析データ（news_analysis.csv）
+```csv
+ticker,has_news,total_news,news_frequency,positive_news,negative_news,neutral_news,overall_sentiment,sentiment_score,confidence
+8136,True,5,low,0,0,5,neutral,0.0,0.0
+```

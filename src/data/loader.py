@@ -252,6 +252,51 @@ class StockDataLoader:
             print(f"Error loading dividend analysis for {ticker}: {e}")
             return None
     
+    def load_news_data(self, ticker: str) -> Optional[pd.DataFrame]:
+        """
+        ニュースデータを読み込み
+        
+        Args:
+            ticker: 銘柄コード
+            
+        Returns:
+            ニュースデータのDataFrame
+        """
+        try:
+            file_path = self.data_dir / ticker / "summary" / "news_data.csv"
+            if not file_path.exists():
+                return None
+            
+            df = pd.read_csv(file_path)
+            # content列をパースしてJSONとして読み込み
+            import json
+            df['parsed_content'] = df['content'].apply(lambda x: json.loads(x) if pd.notna(x) else {})
+            return df
+        except Exception as e:
+            print(f"Error loading news data for {ticker}: {e}")
+            return None
+    
+    def load_news_analysis(self, ticker: str) -> Optional[pd.DataFrame]:
+        """
+        ニュース分析データを読み込み
+        
+        Args:
+            ticker: 銘柄コード
+            
+        Returns:
+            ニュース分析データのDataFrame
+        """
+        try:
+            file_path = self.data_dir / ticker / "summary" / "news_analysis.csv"
+            if not file_path.exists():
+                return None
+            
+            df = pd.read_csv(file_path)
+            return df
+        except Exception as e:
+            print(f"Error loading news analysis for {ticker}: {e}")
+            return None
+    
     def get_ticker_name(self, ticker: str) -> str:
         """
         銘柄コードから銘柄名を取得
