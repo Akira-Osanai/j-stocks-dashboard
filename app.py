@@ -18,6 +18,7 @@ from components.charts import StockChart
 from components.financial_analysis import FinancialAnalysis
 from components.dividend_analysis import DividendAnalysis
 from components.news_sentiment_analysis import NewsSentimentAnalysis
+from components.sector_analysis import SectorAnalysis
 
 # ページ設定
 st.set_page_config(
@@ -124,7 +125,7 @@ def main():
     # メインコンテンツ
     if selected_ticker:
         # タブを作成
-        tab1, tab2, tab3, tab4 = st.tabs(["📈 株価分析", "💰 財務分析", "💎 配当分析", "📰 ニュース分析"])
+        tab1, tab2, tab3, tab4, tab5 = st.tabs(["📈 株価分析", "💰 財務分析", "💎 配当分析", "📰 ニュース分析", "🏢 セクター分析"])
         
         with tab1:
             # データの完全性をチェック
@@ -496,6 +497,83 @@ def main():
                 if news_analysis is not None and not news_analysis.empty:
                     st.markdown("**ニュース分析**")
                     st.dataframe(news_analysis, width='stretch', height=300)
+        
+        with tab5:
+            # セクター分析タブ
+            st.markdown("### 🏢 セクター分析")
+            
+            # セクター分析インスタンスを作成
+            sector_analyzer = SectorAnalysis(data_loader.data_dir)
+            
+            # セクターデータを読み込み
+            with st.spinner("セクターデータを読み込み中..."):
+                sector_data = sector_analyzer.load_sector_data()
+            
+            # データ品質の表示
+            sector_analyzer.display_data_quality_warning(sector_data)
+            
+            if sector_data is not None and not sector_data.empty:
+                # セクターサマリー
+                st.markdown("#### 📊 セクターサマリー")
+                sector_analyzer.display_sector_summary(sector_data)
+                
+                # セクター選択
+                available_sectors = sector_data['sector'].unique().tolist()
+                selected_sector = st.selectbox(
+                    "分析するセクターを選択してください",
+                    available_sectors,
+                    index=0 if available_sectors else None
+                )
+                
+                if selected_sector:
+                    # セクター概要チャート
+                    st.markdown("#### 🎯 セクター概要")
+                    sector_overview_chart = sector_analyzer.create_sector_overview_chart(
+                        sector_data,
+                        title="全セクター別銘柄数",
+                        height=500
+                    )
+                    st.plotly_chart(sector_overview_chart, use_container_width=True)
+                    
+                    # セクター別パフォーマンス
+                    st.markdown("#### 📈 セクター別パフォーマンス")
+                    sector_performance_chart = sector_analyzer.create_sector_performance_chart(
+                        sector_data,
+                        title="セクター別パフォーマンス比較",
+                        height=600
+                    )
+                    st.plotly_chart(sector_performance_chart, use_container_width=True)
+                    
+                    # 業界内分析
+                    st.markdown("#### 🔍 業界内分析")
+                    industry_analysis_chart = sector_analyzer.create_industry_analysis_chart(
+                        sector_data,
+                        selected_sector,
+                        title="業界内分析",
+                        height=500
+                    )
+                    st.plotly_chart(industry_analysis_chart, use_container_width=True)
+                    
+                    # 銘柄比較
+                    st.markdown("#### 🏢 銘柄比較")
+                    company_comparison_chart = sector_analyzer.create_company_comparison_chart(
+                        sector_data,
+                        selected_sector,
+                        title="銘柄比較",
+                        height=600
+                    )
+                    st.plotly_chart(company_comparison_chart, use_container_width=True)
+                    
+                    # 銘柄一覧
+                    sector_analyzer.display_company_list(sector_data, selected_sector, max_companies=20)
+                
+                # セクターデータの詳細表示
+                with st.expander("📋 セクターデータ詳細"):
+                    st.markdown("**全銘柄のセクター情報**")
+                    display_columns = ['ticker', 'company_name', 'sector', 'industry', 'market_cap_billion', 'price_change']
+                    display_data = sector_data[display_columns].copy()
+                    display_data.columns = ['銘柄コード', '会社名', 'セクター', '業界', '時価総額(十億円)', '価格変動率(%)']
+                    st.dataframe(display_data, width='stretch', height=400)
     
     else:
         st.info("サイドバーから銘柄を選択してください")
