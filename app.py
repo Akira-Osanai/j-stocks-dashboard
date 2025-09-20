@@ -1,6 +1,6 @@
 """
 日本株ダッシュボード
-Streamlitベースの株価分析ツール
+Streamlitベースの株価分析ツール - パフォーマンス最適化版
 """
 
 import streamlit as st
@@ -9,6 +9,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import sys
 from pathlib import Path
+import time
 
 # パスを追加
 sys.path.append(str(Path(__file__).parent / "src"))
@@ -19,6 +20,7 @@ from components.financial_analysis import FinancialAnalysis
 from components.dividend_analysis import DividendAnalysis
 from components.news_sentiment_analysis import NewsSentimentAnalysis
 from components.sector_analysis import SectorAnalysis
+from utils.cache import get_data_cache, LazyDataLoader, OptimizedSectorLoader
 
 # ページ設定
 st.set_page_config(
@@ -50,8 +52,39 @@ st.markdown("""
         border-radius: 0.5rem;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
+    .performance-info {
+        background-color: #f8f9fa;
+        padding: 0.3rem 0.6rem;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        color: #6c757d;
+        margin-bottom: 0.5rem;
+        border-left: 3px solid #dee2e6;
+    }
 </style>
 """, unsafe_allow_html=True)
+
+def display_performance_info():
+    """パフォーマンス情報を表示"""
+    cache = get_data_cache()
+    stats = cache.get_cache_stats()
+    
+    with st.expander("📊 パフォーマンス情報", expanded=False):
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric("キャッシュ済みデータ", f"{stats['valid_cached']}件")
+        
+        with col2:
+            st.metric("期限切れキャッシュ", f"{stats['expired_cached']}件")
+        
+        with col3:
+            st.metric("キャッシュ有効期限", f"{stats['cache_ttl']//60}分")
+        
+        with col4:
+            if st.button("キャッシュクリア"):
+                cache.clear()
+                st.rerun()
 
 def main():
     """メイン関数"""
@@ -59,12 +92,24 @@ def main():
     # ヘッダー
     st.markdown('<h1 class="main-header">📈 日本株ダッシュボード</h1>', unsafe_allow_html=True)
     
-    # データローダーを初期化
-    @st.cache_resource
-    def get_data_loader():
-        return StockDataLoader()
+    # パフォーマンス情報を表示
+    display_performance_info()
     
-    data_loader = get_data_loader()
+    # データローダーとキャッシュを初期化
+    @st.cache_resource
+    def get_optimized_data_loader():
+        data_loader = StockDataLoader()
+        cache = get_data_cache()
+        return LazyDataLoader(data_loader, cache)
+    
+    @st.cache_resource
+    def get_optimized_sector_loader():
+        data_loader = StockDataLoader()
+        cache = get_data_cache()
+        return OptimizedSectorLoader(data_loader, cache)
+    
+    data_loader = get_optimized_data_loader()
+    sector_loader = get_optimized_sector_loader()
     
     # サイドバー
     with st.sidebar:
@@ -74,7 +119,7 @@ def main():
         search_query = st.text_input("銘柄名またはコードで検索", placeholder="例: トヨタ, 7203")
         
         if search_query:
-            search_results = data_loader.search_tickers(search_query)
+            search_results = data_loader.data_loader.search_tickers(search_query)
             if search_results:
                 st.write("検索結果:")
                 for ticker, name in search_results[:10]:  # 最大10件表示
@@ -84,12 +129,12 @@ def main():
                 st.write("該当する銘柄が見つかりませんでした")
         
         # 銘柄選択
-        available_tickers = data_loader.get_available_tickers()
+        available_tickers = data_loader.data_loader.get_available_tickers()
         
         # 表示用の銘柄リストを作成
         ticker_options = []
         for ticker in available_tickers:
-            display_name = data_loader.get_ticker_display_name(ticker)
+            display_name = data_loader.data_loader.get_ticker_display_name(ticker)
             ticker_options.append((ticker, display_name))
         
         # 選択ボックスのオプション
@@ -129,11 +174,11 @@ def main():
         
         with tab1:
             # データの完全性をチェック
-            if not data_loader.is_data_sufficient(selected_ticker):
+            if not data_loader.data_loader.is_data_sufficient(selected_ticker):
                 st.warning("⚠️ この銘柄のデータが不足しています。一部の機能が制限される可能性があります。")
                 
                 # データの詳細状況を表示
-                completeness = data_loader.check_data_completeness(selected_ticker)
+                completeness = data_loader.data_loader.check_data_completeness(selected_ticker)
                 col1, col2, col3, col4 = st.columns(4)
                 
                 with col1:
@@ -152,11 +197,15 @@ def main():
                     status = "✅" if completeness['financial_data'] else "❌"
                     st.write(f"財務データ: {status}")
             
-            # データを読み込み
+            # データを読み込み（最適化版）
+            start_time = time.time()
             with st.spinner(f"銘柄 {selected_ticker} のデータを読み込み中..."):
                 stock_data = data_loader.load_stock_data(selected_ticker)
                 company_info = data_loader.load_company_info(selected_ticker)
-                technical_data = data_loader.load_technical_indicators(selected_ticker)
+                technical_data = data_loader.data_loader.load_technical_indicators(selected_ticker)
+            
+            load_time = time.time() - start_time
+            st.markdown(f'<div class="performance-info">⏱️ データ読み込み時間: {load_time:.2f}秒</div>', unsafe_allow_html=True)
             
             if stock_data is not None and not stock_data.empty:
                 # 日付範囲でフィルタリング
@@ -220,7 +269,7 @@ def main():
                     show_volume=show_volume
                 )
                 
-                st.plotly_chart(candlestick_chart, use_container_width=True)
+                st.plotly_chart(candlestick_chart, width='stretch')
                 
                 # テクニカル指標
                 if technical_data is not None and not technical_data.empty:
@@ -240,7 +289,7 @@ def main():
                             height=chart_height
                         )
                         
-                        st.plotly_chart(technical_chart, use_container_width=True)
+                        st.plotly_chart(technical_chart, width='stretch')
                 
                 # データテーブル
                 with st.expander("📋 詳細データ"):
@@ -254,15 +303,19 @@ def main():
                 st.error(f"銘柄 {selected_ticker} のデータが見つかりませんでした")
         
         with tab2:
-            # 財務分析タブ
+            # 財務分析タブ（最適化版）
             st.markdown("### 💰 財務分析")
             
-            # 財務データを読み込み
+            # 財務データを読み込み（最適化版）
+            start_time = time.time()
             with st.spinner("財務データを読み込み中..."):
-                income_statement = data_loader.load_income_statement(selected_ticker)
-                balance_sheet = data_loader.load_balance_sheet(selected_ticker)
-                cashflow = data_loader.load_cashflow(selected_ticker)
-                financial_ratios = data_loader.load_financial_ratios(selected_ticker)
+                income_statement = data_loader.load_financial_data(selected_ticker, "income_statement")
+                balance_sheet = data_loader.load_financial_data(selected_ticker, "balance_sheet")
+                cashflow = data_loader.load_financial_data(selected_ticker, "cashflow")
+                financial_ratios = data_loader.load_financial_data(selected_ticker, "financial_ratios")
+            
+            load_time = time.time() - start_time
+            st.markdown(f'<div class="performance-info">⏱️ 財務データ読み込み時間: {load_time:.2f}秒</div>', unsafe_allow_html=True)
             
             # データ品質の表示
             col1, col2, col3, col4 = st.columns(4)
@@ -287,7 +340,7 @@ def main():
                     title=f"{selected_ticker} 損益計算書",
                     height=500
                 )
-                st.plotly_chart(income_chart, use_container_width=True)
+                st.plotly_chart(income_chart, width='stretch')
             
             # 貸借対照表
             if balance_sheet is not None and not balance_sheet.empty:
@@ -297,7 +350,7 @@ def main():
                     title=f"{selected_ticker} 貸借対照表",
                     height=500
                 )
-                st.plotly_chart(balance_chart, use_container_width=True)
+                st.plotly_chart(balance_chart, width='stretch')
             
             # キャッシュフロー計算書
             if cashflow is not None and not cashflow.empty:
@@ -307,7 +360,7 @@ def main():
                     title=f"{selected_ticker} キャッシュフロー計算書",
                     height=500
                 )
-                st.plotly_chart(cashflow_chart, use_container_width=True)
+                st.plotly_chart(cashflow_chart, width='stretch')
             
             # 収益性分析
             if income_statement is not None and not income_statement.empty:
@@ -317,7 +370,7 @@ def main():
                     title=f"{selected_ticker} 収益性分析",
                     height=500
                 )
-                st.plotly_chart(profitability_chart, use_container_width=True)
+                st.plotly_chart(profitability_chart, width='stretch')
             
             # 財務比率
             if financial_ratios is not None and not financial_ratios.empty:
@@ -327,7 +380,7 @@ def main():
                     title=f"{selected_ticker} 財務比率",
                     height=400
                 )
-                st.plotly_chart(ratios_chart, use_container_width=True)
+                st.plotly_chart(ratios_chart, width='stretch')
             
             # 財務データの詳細表示
             with st.expander("📋 財務データ詳細"):
@@ -344,13 +397,17 @@ def main():
                     st.dataframe(financial_ratios, width='stretch', height=300)
         
         with tab3:
-            # 配当分析タブ
+            # 配当分析タブ（最適化版）
             st.markdown("### 💎 配当分析")
             
-            # 配当データを読み込み
+            # 配当データを読み込み（最適化版）
+            start_time = time.time()
             with st.spinner("配当データを読み込み中..."):
                 dividend_data = data_loader.load_dividend_data(selected_ticker)
-                dividend_analysis = data_loader.load_dividend_analysis(selected_ticker)
+                dividend_analysis = data_loader.data_loader.load_dividend_analysis(selected_ticker)
+            
+            load_time = time.time() - start_time
+            st.markdown(f'<div class="performance-info">⏱️ 配当データ読み込み時間: {load_time:.2f}秒</div>', unsafe_allow_html=True)
             
             # データ品質の表示
             col1, col2 = st.columns(2)
@@ -374,7 +431,7 @@ def main():
                     title=f"{selected_ticker} 配当履歴",
                     height=500
                 )
-                st.plotly_chart(dividend_timeline_chart, use_container_width=True)
+                st.plotly_chart(dividend_timeline_chart, width='stretch')
             
             # 配当利回りチャート
             if dividend_data is not None and not dividend_data.empty and stock_data is not None and not stock_data.empty:
@@ -385,7 +442,7 @@ def main():
                     title=f"{selected_ticker} 配当利回り推移",
                     height=500
                 )
-                st.plotly_chart(dividend_yield_chart, use_container_width=True)
+                st.plotly_chart(dividend_yield_chart, width='stretch')
             
             # 配当成長率チャート
             if dividend_data is not None and not dividend_data.empty:
@@ -395,7 +452,7 @@ def main():
                     title=f"{selected_ticker} 配当成長率",
                     height=400
                 )
-                st.plotly_chart(dividend_growth_chart, use_container_width=True)
+                st.plotly_chart(dividend_growth_chart, width='stretch')
             
             # 配当一貫性チャート
             if dividend_data is not None and not dividend_data.empty:
@@ -405,7 +462,7 @@ def main():
                     title=f"{selected_ticker} 配当の一貫性",
                     height=400
                 )
-                st.plotly_chart(dividend_consistency_chart, use_container_width=True)
+                st.plotly_chart(dividend_consistency_chart, width='stretch')
             
             # 配当データの詳細表示
             with st.expander("📋 配当データ詳細"):
@@ -418,13 +475,17 @@ def main():
                     st.dataframe(dividend_analysis, width='stretch', height=300)
         
         with tab4:
-            # ニュース分析タブ
+            # ニュース分析タブ（最適化版）
             st.markdown("### 📰 ニュース・センチメント分析")
             
-            # ニュースデータを読み込み
+            # ニュースデータを読み込み（最適化版）
+            start_time = time.time()
             with st.spinner("ニュースデータを読み込み中..."):
                 news_data = data_loader.load_news_data(selected_ticker)
-                news_analysis = data_loader.load_news_analysis(selected_ticker)
+                news_analysis = data_loader.data_loader.load_news_analysis(selected_ticker)
+            
+            load_time = time.time() - start_time
+            st.markdown(f'<div class="performance-info">⏱️ ニュースデータ読み込み時間: {load_time:.2f}秒</div>', unsafe_allow_html=True)
             
             # データ品質の表示
             col1, col2 = st.columns(2)
@@ -448,7 +509,7 @@ def main():
                     title=f"{selected_ticker} センチメント概要",
                     height=400
                 )
-                st.plotly_chart(sentiment_overview_chart, use_container_width=True)
+                st.plotly_chart(sentiment_overview_chart, width='stretch')
             
             # センチメントスコア
             if news_analysis is not None and not news_analysis.empty:
@@ -458,7 +519,7 @@ def main():
                     title=f"{selected_ticker} センチメントスコア",
                     height=300
                 )
-                st.plotly_chart(sentiment_score_chart, use_container_width=True)
+                st.plotly_chart(sentiment_score_chart, width='stretch')
             
             # センチメント推移
             if news_data is not None and not news_data.empty:
@@ -468,7 +529,7 @@ def main():
                     title=f"{selected_ticker} センチメント推移",
                     height=500
                 )
-                st.plotly_chart(sentiment_timeline_chart, use_container_width=True)
+                st.plotly_chart(sentiment_timeline_chart, width='stretch')
             
             # ニュースソース分析
             if news_data is not None and not news_data.empty:
@@ -478,7 +539,7 @@ def main():
                     title=f"{selected_ticker} ニュースソース分析",
                     height=400
                 )
-                st.plotly_chart(news_source_chart, use_container_width=True)
+                st.plotly_chart(news_source_chart, width='stretch')
             
             # ニュース一覧
             if news_data is not None and not news_data.empty:
@@ -499,15 +560,19 @@ def main():
                     st.dataframe(news_analysis, width='stretch', height=300)
         
         with tab5:
-            # セクター分析タブ
+            # セクター分析タブ（最適化版）
             st.markdown("### 🏢 セクター分析")
             
-            # セクター分析インスタンスを作成
-            sector_analyzer = SectorAnalysis(data_loader.data_dir)
-            
-            # セクターデータを読み込み
+            # セクターデータを読み込み（最適化版）
+            start_time = time.time()
             with st.spinner("セクターデータを読み込み中..."):
-                sector_data = sector_analyzer.load_sector_data()
+                sector_data = sector_loader.load_sector_data()
+            
+            load_time = time.time() - start_time
+            st.markdown(f'<div class="performance-info">⏱️ セクターデータ読み込み時間: {load_time:.2f}秒</div>', unsafe_allow_html=True)
+            
+            # セクター分析インスタンスを作成
+            sector_analyzer = SectorAnalysis(data_loader.data_loader.data_dir)
             
             # データ品質の表示
             sector_analyzer.display_data_quality_warning(sector_data)
@@ -533,7 +598,7 @@ def main():
                         title="全セクター別銘柄数",
                         height=500
                     )
-                    st.plotly_chart(sector_overview_chart, use_container_width=True)
+                    st.plotly_chart(sector_overview_chart, width='stretch')
                     
                     # セクター別パフォーマンス
                     st.markdown("#### 📈 セクター別パフォーマンス")
@@ -542,7 +607,7 @@ def main():
                         title="セクター別パフォーマンス比較",
                         height=600
                     )
-                    st.plotly_chart(sector_performance_chart, use_container_width=True)
+                    st.plotly_chart(sector_performance_chart, width='stretch')
                     
                     # 業界内分析
                     st.markdown("#### 🔍 業界内分析")
@@ -552,7 +617,7 @@ def main():
                         title="業界内分析",
                         height=500
                     )
-                    st.plotly_chart(industry_analysis_chart, use_container_width=True)
+                    st.plotly_chart(industry_analysis_chart, width='stretch')
                     
                     # 銘柄比較
                     st.markdown("#### 🏢 銘柄比較")
@@ -562,7 +627,7 @@ def main():
                         title="銘柄比較",
                         height=600
                     )
-                    st.plotly_chart(company_comparison_chart, use_container_width=True)
+                    st.plotly_chart(company_comparison_chart, width='stretch')
                     
                     # 銘柄一覧
                     sector_analyzer.display_company_list(sector_data, selected_sector, max_companies=20)
@@ -580,7 +645,7 @@ def main():
         
         # 利用可能な銘柄の一覧表示
         st.markdown("### 📋 利用可能な銘柄")
-        available_tickers = data_loader.get_available_tickers()
+        available_tickers = data_loader.data_loader.get_available_tickers()
         
         # ページネーション
         items_per_page = 50
@@ -608,7 +673,7 @@ def main():
         cols = st.columns(5)
         for i, ticker in enumerate(tickers_to_show):
             with cols[i % 5]:
-                display_name = data_loader.get_ticker_display_name(ticker)
+                display_name = data_loader.data_loader.get_ticker_display_name(ticker)
                 if st.button(f"{ticker}\n{display_name[:10]}...", key=f"ticker_{ticker}"):
                     st.session_state.selected_ticker = ticker
                     st.rerun()
