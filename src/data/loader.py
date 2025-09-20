@@ -4,6 +4,7 @@ CSVファイルから株価データを読み込むためのモジュール
 """
 
 import pandas as pd
+import numpy as np
 import os
 from typing import Dict, List, Optional, Tuple
 from pathlib import Path
@@ -116,9 +117,93 @@ class StockDataLoader:
             if not file_path.exists():
                 return None
             
-            return pd.read_csv(file_path)
+            df = pd.read_csv(file_path)
+            # 0の値をNaNに変換（データ不足を示す）
+            df['value'] = df['value'].replace(0, np.nan)
+            return df
         except Exception as e:
             print(f"Error loading financial ratios for {ticker}: {e}")
+            return None
+    
+    def load_income_statement(self, ticker: str) -> Optional[pd.DataFrame]:
+        """
+        指定された銘柄の損益計算書を読み込み
+        
+        Args:
+            ticker: 銘柄コード
+            
+        Returns:
+            損益計算書のDataFrame、読み込みに失敗した場合はNone
+        """
+        try:
+            file_path = self.data_dir / ticker / "financial_data" / "income_statement.csv"
+            if not file_path.exists():
+                return None
+            
+            df = pd.read_csv(file_path)
+            # 空の値をNaNに変換
+            df = df.replace('', np.nan)
+            # 数値列をfloatに変換（NaNはそのまま保持）
+            for col in df.columns:
+                if col != 'ticker':
+                    df[col] = pd.to_numeric(df[col], errors='coerce')
+            return df
+        except Exception as e:
+            print(f"Error loading income statement for {ticker}: {e}")
+            return None
+    
+    def load_balance_sheet(self, ticker: str) -> Optional[pd.DataFrame]:
+        """
+        指定された銘柄の貸借対照表を読み込み
+        
+        Args:
+            ticker: 銘柄コード
+            
+        Returns:
+            貸借対照表のDataFrame、読み込みに失敗した場合はNone
+        """
+        try:
+            file_path = self.data_dir / ticker / "financial_data" / "balance_sheet.csv"
+            if not file_path.exists():
+                return None
+            
+            df = pd.read_csv(file_path)
+            # 空の値をNaNに変換
+            df = df.replace('', np.nan)
+            # 数値列をfloatに変換（NaNはそのまま保持）
+            for col in df.columns:
+                if col != 'ticker':
+                    df[col] = pd.to_numeric(df[col], errors='coerce')
+            return df
+        except Exception as e:
+            print(f"Error loading balance sheet for {ticker}: {e}")
+            return None
+    
+    def load_cashflow(self, ticker: str) -> Optional[pd.DataFrame]:
+        """
+        指定された銘柄のキャッシュフロー計算書を読み込み
+        
+        Args:
+            ticker: 銘柄コード
+            
+        Returns:
+            キャッシュフロー計算書のDataFrame、読み込みに失敗した場合はNone
+        """
+        try:
+            file_path = self.data_dir / ticker / "financial_data" / "cashflow.csv"
+            if not file_path.exists():
+                return None
+            
+            df = pd.read_csv(file_path)
+            # 空の値をNaNに変換
+            df = df.replace('', np.nan)
+            # 数値列をfloatに変換（NaNはそのまま保持）
+            for col in df.columns:
+                if col != 'ticker':
+                    df[col] = pd.to_numeric(df[col], errors='coerce')
+            return df
+        except Exception as e:
+            print(f"Error loading cashflow for {ticker}: {e}")
             return None
     
     def get_ticker_name(self, ticker: str) -> str:
