@@ -297,6 +297,27 @@ class StockDataLoader:
             print(f"Error loading news analysis for {ticker}: {e}")
             return None
     
+    def load_company_info(self, ticker: str) -> Optional[pd.DataFrame]:
+        """
+        企業情報データを読み込み
+        
+        Args:
+            ticker: 銘柄コード
+            
+        Returns:
+            企業情報データのDataFrame
+        """
+        try:
+            file_path = self.data_dir / ticker / "company_info" / "company_info.csv"
+            if not file_path.exists():
+                return None
+            
+            df = pd.read_csv(file_path)
+            return df
+        except Exception as e:
+            print(f"Error loading company info for {ticker}: {e}")
+            return None
+    
     def get_ticker_name(self, ticker: str) -> str:
         """
         銘柄コードから銘柄名を取得

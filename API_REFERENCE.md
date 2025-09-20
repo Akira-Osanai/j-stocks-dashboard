@@ -480,3 +480,96 @@ d4f7ffb7-e65a-359e-b390-916f10bef293,"{'id': 'd4f7ffb7-e65a-359e-b390-916f10bef2
 ticker,has_news,total_news,news_frequency,positive_news,negative_news,neutral_news,overall_sentiment,sentiment_score,confidence
 8136,True,5,low,0,0,5,neutral,0.0,0.0
 ```
+
+## 6. SectorAnalysis クラス
+
+### 概要
+セクター分析を表示するクラス
+
+### メソッド
+
+#### load_sector_data()
+全銘柄のセクター情報を読み込み
+
+**戻り値:**
+- `pd.DataFrame`: セクター情報のDataFrame
+
+#### create_sector_overview_chart(sector_data, title, height)
+セクター別銘柄数の円グラフを作成
+
+**パラメータ:**
+- `sector_data` (pd.DataFrame): セクター情報のDataFrame
+- `title` (str): チャートのタイトル
+- `height` (int): チャートの高さ
+
+**戻り値:**
+- `go.Figure`: PlotlyのFigureオブジェクト
+
+#### create_sector_performance_chart(sector_data, title, height)
+セクター別のパフォーマンス比較チャートを作成
+
+**パラメータ:**
+- `sector_data` (pd.DataFrame): セクター情報のDataFrame
+- `title` (str): チャートのタイトル
+- `height` (int): チャートの高さ
+
+**戻り値:**
+- `go.Figure`: PlotlyのFigureオブジェクト
+
+#### create_industry_analysis_chart(sector_data, selected_sector, title, height)
+選択されたセクター内の業界分析チャートを作成
+
+**パラメータ:**
+- `sector_data` (pd.DataFrame): セクター情報のDataFrame
+- `selected_sector` (str): 選択されたセクター
+- `title` (str): チャートのタイトル
+- `height` (int): チャートの高さ
+
+**戻り値:**
+- `go.Figure`: PlotlyのFigureオブジェクト
+
+#### create_company_comparison_chart(sector_data, selected_sector, title, height)
+セクター内の銘柄比較チャートを作成
+
+**パラメータ:**
+- `sector_data` (pd.DataFrame): セクター情報のDataFrame
+- `selected_sector` (str): 選択されたセクター
+- `title` (str): チャートのタイトル
+- `height` (int): チャートの高さ
+
+**戻り値:**
+- `go.Figure`: PlotlyのFigureオブジェクト
+
+#### display_sector_summary(sector_data)
+セクターサマリー情報を表示
+
+**パラメータ:**
+- `sector_data` (pd.DataFrame): セクター情報のDataFrame
+
+#### display_company_list(sector_data, selected_sector, max_companies)
+セクター内の銘柄一覧を表示
+
+**パラメータ:**
+- `sector_data` (pd.DataFrame): セクター情報のDataFrame
+- `selected_sector` (str): 選択されたセクター
+- `max_companies` (int): 表示する最大銘柄数
+
+#### display_data_quality_warning(sector_data)
+データ品質の警告を表示
+
+**パラメータ:**
+- `sector_data` (pd.DataFrame): セクター情報のDataFrame
+
+### セクターデータの構造
+
+#### 企業情報データ（company_info.csv）
+```csv
+ticker,symbol,company_name,sector,industry,market_cap,employees,website,description,country,city,state,zip,phone,ceo,exchange,currency,timezone,quote_type,shares_outstanding,float_shares,implied_shares_outstanding,market_cap_billion,company_size,sector_category,estimated_market
+8136,8136.T,"Sanrio Company, Ltd.",Consumer Cyclical,Specialty Retail,1613077544960,1445,https://www.sanrio.co.jp,"...",Japan,Tokyo,,141-8603,81 3 3779 8111,,JPX,JPY,,EQUITY,237287077,185911510,240882336,1613.07754496,超大規模,製造業,プライム
+```
+
+#### 株価データ（stock_data.csv）
+```csv
+Open,High,Low,Close,Volume,Dividends,Stock Splits,ticker,Date,銘柄名,Capital Gains
+488.2814025878906,488.2814025878906,488.2814025878906,488.2814025878906,0,0.0,0.0,8136,2001-01-01,サンリオ,
+```
