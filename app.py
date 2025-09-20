@@ -306,6 +306,16 @@ def main():
                 )
                 st.plotly_chart(cashflow_chart, use_container_width=True)
             
+            # 収益性分析
+            if income_statement is not None and not income_statement.empty:
+                st.markdown("#### 📊 収益性分析")
+                profitability_chart = FinancialAnalysis.create_profitability_analysis_chart(
+                    income_statement,
+                    title=f"{selected_ticker} 収益性分析",
+                    height=500
+                )
+                st.plotly_chart(profitability_chart, use_container_width=True)
+            
             # 財務比率
             if financial_ratios is not None and not financial_ratios.empty:
                 st.markdown("#### 📈 財務比率")
