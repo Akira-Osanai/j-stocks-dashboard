@@ -120,6 +120,11 @@ def main():
                     (stock_data['Date'].dt.date <= end_date)
                 ]
             
+            # フィルタリング後にデータが空でないかチェック
+            if stock_data.empty:
+                st.warning("指定された期間にデータがありません。期間を変更してください。")
+                return
+            
             # 銘柄情報表示
             if company_info is not None and not company_info.empty:
                 company_name = company_info.iloc[0].get('company_name', f'銘柄{selected_ticker}')
@@ -137,13 +142,16 @@ def main():
                 st.metric("現在価格", f"¥{current_price:,.0f}")
             
             with col2:
-                price_change = stock_data['Close'].iloc[-1] - stock_data['Close'].iloc[-2]
-                price_change_pct = (price_change / stock_data['Close'].iloc[-2]) * 100
-                st.metric(
-                    "前日比", 
-                    f"¥{price_change:+,.0f}",
-                    f"{price_change_pct:+.2f}%"
-                )
+                if len(stock_data) >= 2:
+                    price_change = stock_data['Close'].iloc[-1] - stock_data['Close'].iloc[-2]
+                    price_change_pct = (price_change / stock_data['Close'].iloc[-2]) * 100
+                    st.metric(
+                        "前日比", 
+                        f"¥{price_change:+,.0f}",
+                        f"{price_change_pct:+.2f}%"
+                    )
+                else:
+                    st.metric("前日比", "データ不足", "N/A")
             
             with col3:
                 volume = stock_data['Volume'].iloc[-1]
@@ -170,21 +178,29 @@ def main():
             
             # テクニカル指標
             if technical_data is not None and not technical_data.empty:
-                st.markdown("### 📊 テクニカル指標")
+                # テクニカル指標も同じ日付範囲でフィルタリング
+                if use_date_range and start_date and end_date:
+                    technical_data = technical_data[
+                        (technical_data['Date'].dt.date >= start_date) & 
+                        (technical_data['Date'].dt.date <= end_date)
+                    ]
                 
-                technical_chart = StockChart.create_technical_indicators_chart(
-                    technical_data,
-                    title=f"{selected_ticker} テクニカル指標",
-                    height=chart_height
-                )
-                
-                st.plotly_chart(technical_chart, use_container_width=True)
+                if not technical_data.empty:
+                    st.markdown("### 📊 テクニカル指標")
+                    
+                    technical_chart = StockChart.create_technical_indicators_chart(
+                        technical_data,
+                        title=f"{selected_ticker} テクニカル指標",
+                        height=chart_height
+                    )
+                    
+                    st.plotly_chart(technical_chart, use_container_width=True)
             
             # データテーブル
             with st.expander("📋 詳細データ"):
                 st.dataframe(
                     stock_data.tail(20),
-                    use_container_width=True,
+                    width='stretch',
                     height=400
                 )
         
