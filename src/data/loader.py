@@ -206,6 +206,52 @@ class StockDataLoader:
             print(f"Error loading cashflow for {ticker}: {e}")
             return None
     
+    def load_dividend_data(self, ticker: str) -> Optional[pd.DataFrame]:
+        """
+        配当データを読み込み
+        
+        Args:
+            ticker: 銘柄コード
+            
+        Returns:
+            配当データのDataFrame
+        """
+        try:
+            file_path = self.data_dir / ticker / "dividend_data" / "dividend_data.csv"
+            if not file_path.exists():
+                return None
+            
+            df = pd.read_csv(file_path)
+            # 日付列をdatetimeに変換
+            df['date'] = pd.to_datetime(df['date'])
+            # 配当額を数値に変換
+            df['dividend'] = pd.to_numeric(df['dividend'], errors='coerce')
+            return df
+        except Exception as e:
+            print(f"Error loading dividend data for {ticker}: {e}")
+            return None
+    
+    def load_dividend_analysis(self, ticker: str) -> Optional[pd.DataFrame]:
+        """
+        配当分析データを読み込み
+        
+        Args:
+            ticker: 銘柄コード
+            
+        Returns:
+            配当分析データのDataFrame
+        """
+        try:
+            file_path = self.data_dir / ticker / "dividend_data" / "dividend_analysis.csv"
+            if not file_path.exists():
+                return None
+            
+            df = pd.read_csv(file_path)
+            return df
+        except Exception as e:
+            print(f"Error loading dividend analysis for {ticker}: {e}")
+            return None
+    
     def get_ticker_name(self, ticker: str) -> str:
         """
         銘柄コードから銘柄名を取得
