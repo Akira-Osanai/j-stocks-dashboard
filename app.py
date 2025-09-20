@@ -155,14 +155,6 @@ def main():
                 company_info = data_loader.load_company_info(selected_ticker)
                 technical_data = data_loader.load_technical_indicators(selected_ticker)
             
-            # デバッグ情報を表示
-            if stock_data is None:
-                st.error("株価データの読み込みに失敗しました")
-            elif stock_data.empty:
-                st.error("株価データが空です")
-            else:
-                st.success(f"株価データを読み込みました: {len(stock_data)}件のデータ")
-            
             if stock_data is not None and not stock_data.empty:
                 # 日付範囲でフィルタリング
                 if use_date_range and start_date and end_date:
