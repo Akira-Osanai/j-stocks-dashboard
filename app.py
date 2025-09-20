@@ -81,12 +81,26 @@ def main():
         
         # 銘柄選択
         available_tickers = data_loader.get_available_tickers()
-        selected_ticker = st.selectbox(
+        
+        # 表示用の銘柄リストを作成
+        ticker_options = []
+        for ticker in available_tickers:
+            display_name = data_loader.get_ticker_display_name(ticker)
+            ticker_options.append((ticker, display_name))
+        
+        # 選択ボックスのオプション
+        ticker_display_names = [f"{ticker}: {display_name}" for ticker, display_name in ticker_options]
+        
+        selected_display = st.selectbox(
             "銘柄を選択してください",
-            options=available_tickers,
+            options=ticker_display_names,
             index=0 if not hasattr(st.session_state, 'selected_ticker') else 
-                  available_tickers.index(st.session_state.selected_ticker) if st.session_state.selected_ticker in available_tickers else 0
+                  next((i for i, (ticker, _) in enumerate(ticker_options) if ticker == st.session_state.selected_ticker), 0)
         )
+        
+        # 選択された銘柄コードを取得
+        selected_ticker = next(ticker for ticker, display_name in ticker_options 
+                              if f"{ticker}: {display_name}" == selected_display)
         
         # チャート設定
         st.header("📊 チャート設定")
@@ -106,6 +120,30 @@ def main():
     
     # メインコンテンツ
     if selected_ticker:
+        # データの完全性をチェック
+        if not data_loader.is_data_sufficient(selected_ticker):
+            st.warning("⚠️ この銘柄のデータが不足しています。一部の機能が制限される可能性があります。")
+            
+            # データの詳細状況を表示
+            completeness = data_loader.check_data_completeness(selected_ticker)
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                status = "✅" if completeness['stock_data'] else "❌"
+                st.write(f"株価データ: {status}")
+            
+            with col2:
+                status = "✅" if completeness['company_info'] else "❌"
+                st.write(f"企業情報: {status}")
+            
+            with col3:
+                status = "✅" if completeness['technical_data'] else "❌"
+                st.write(f"テクニカル指標: {status}")
+            
+            with col4:
+                status = "✅" if completeness['financial_data'] else "❌"
+                st.write(f"財務データ: {status}")
+        
         # データを読み込み
         with st.spinner(f"銘柄 {selected_ticker} のデータを読み込み中..."):
             stock_data = data_loader.load_stock_data(selected_ticker)
@@ -240,8 +278,8 @@ def main():
         cols = st.columns(5)
         for i, ticker in enumerate(tickers_to_show):
             with cols[i % 5]:
-                company_name = data_loader.get_ticker_name(ticker)
-                if st.button(f"{ticker}\n{company_name[:10]}...", key=f"ticker_{ticker}"):
+                display_name = data_loader.get_ticker_display_name(ticker)
+                if st.button(f"{ticker}\n{display_name[:10]}...", key=f"ticker_{ticker}"):
                     st.session_state.selected_ticker = ticker
                     st.rerun()
 
