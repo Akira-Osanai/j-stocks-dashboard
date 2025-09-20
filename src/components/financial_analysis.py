@@ -41,7 +41,6 @@ class FinancialAnalysis:
         available_metrics = [col for col in key_metrics if col in df.columns]
         
         if not available_metrics:
-            # データが存在しない場合のエラーハンドリング
             fig = go.Figure()
             fig.add_annotation(
                 text="データが不足しています",
@@ -52,7 +51,8 @@ class FinancialAnalysis:
             fig.update_layout(title=title, height=height)
             return fig
         
-        # 年次データの準備（列名から年を抽出）
+        # データを転置して年次データを整理
+        # 各年（列）を年として扱い、指標を行として扱う
         years = []
         for col in df.columns:
             if col not in ['ticker'] and not pd.isna(df[col].iloc[0]):
@@ -69,38 +69,26 @@ class FinancialAnalysis:
             fig.update_layout(title=title, height=height)
             return fig
         
-        # データを整理
-        data = []
-        for metric in available_metrics:
-            values = []
-            for year in years:
-                value = df[metric].iloc[0] if not pd.isna(df[metric].iloc[0]) else None
-                values.append(value)
-            data.append({
-                'metric': metric,
-                'years': years,
-                'values': values
-            })
-        
         # チャート作成
         fig = go.Figure()
         
         colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728']
-        for i, item in enumerate(data):
-            # NaNでない値のみをプロット
+        for i, metric in enumerate(available_metrics):
+            values = []
             valid_years = []
-            valid_values = []
-            for year, value in zip(item['years'], item['values']):
-                if value is not None and not pd.isna(value):
-                    valid_years.append(year)
-                    valid_values.append(value / 1e9)  # 十億円単位に変換
             
-            if valid_values:
+            for year in years:
+                value = df[metric].iloc[0] if not pd.isna(df[metric].iloc[0]) else None
+                if value is not None and not pd.isna(value):
+                    values.append(value / 1e9)  # 十億円単位に変換
+                    valid_years.append(year)
+            
+            if values:
                 fig.add_trace(go.Scatter(
                     x=valid_years,
-                    y=valid_values,
+                    y=values,
                     mode='lines+markers',
-                    name=item['metric'],
+                    name=metric,
                     line=dict(color=colors[i % len(colors)], width=3),
                     marker=dict(size=8)
                 ))
@@ -177,38 +165,26 @@ class FinancialAnalysis:
             fig.update_layout(title=title, height=height)
             return fig
         
-        # データを整理
-        data = []
-        for metric in available_metrics:
-            values = []
-            for year in years:
-                value = df[metric].iloc[0] if not pd.isna(df[metric].iloc[0]) else None
-                values.append(value)
-            data.append({
-                'metric': metric,
-                'years': years,
-                'values': values
-            })
-        
         # チャート作成
         fig = go.Figure()
         
         colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd']
-        for i, item in enumerate(data):
-            # NaNでない値のみをプロット
+        for i, metric in enumerate(available_metrics):
+            values = []
             valid_years = []
-            valid_values = []
-            for year, value in zip(item['years'], item['values']):
-                if value is not None and not pd.isna(value):
-                    valid_years.append(year)
-                    valid_values.append(value / 1e9)  # 十億円単位に変換
             
-            if valid_values:
+            for year in years:
+                value = df[metric].iloc[0] if not pd.isna(df[metric].iloc[0]) else None
+                if value is not None and not pd.isna(value):
+                    values.append(value / 1e9)  # 十億円単位に変換
+                    valid_years.append(year)
+            
+            if values:
                 fig.add_trace(go.Scatter(
                     x=valid_years,
-                    y=valid_values,
+                    y=values,
                     mode='lines+markers',
-                    name=item['metric'],
+                    name=metric,
                     line=dict(color=colors[i % len(colors)], width=3),
                     marker=dict(size=8)
                 ))
@@ -285,38 +261,26 @@ class FinancialAnalysis:
             fig.update_layout(title=title, height=height)
             return fig
         
-        # データを整理
-        data = []
-        for metric in available_metrics:
-            values = []
-            for year in years:
-                value = df[metric].iloc[0] if not pd.isna(df[metric].iloc[0]) else None
-                values.append(value)
-            data.append({
-                'metric': metric,
-                'years': years,
-                'values': values
-            })
-        
         # チャート作成
         fig = go.Figure()
         
         colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728']
-        for i, item in enumerate(data):
-            # NaNでない値のみをプロット
+        for i, metric in enumerate(available_metrics):
+            values = []
             valid_years = []
-            valid_values = []
-            for year, value in zip(item['years'], item['values']):
-                if value is not None and not pd.isna(value):
-                    valid_years.append(year)
-                    valid_values.append(value / 1e9)  # 十億円単位に変換
             
-            if valid_values:
+            for year in years:
+                value = df[metric].iloc[0] if not pd.isna(df[metric].iloc[0]) else None
+                if value is not None and not pd.isna(value):
+                    values.append(value / 1e9)  # 十億円単位に変換
+                    valid_years.append(year)
+            
+            if values:
                 fig.add_trace(go.Scatter(
                     x=valid_years,
-                    y=valid_values,
+                    y=values,
                     mode='lines+markers',
-                    name=item['metric'],
+                    name=metric,
                     line=dict(color=colors[i % len(colors)], width=3),
                     marker=dict(size=8)
                 ))
