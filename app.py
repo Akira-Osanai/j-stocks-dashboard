@@ -16,6 +16,7 @@ sys.path.append(str(Path(__file__).parent / "src"))
 from data.loader import StockDataLoader
 from components.charts import StockChart
 from components.financial_analysis import FinancialAnalysis
+from components.dividend_analysis import DividendAnalysis
 
 # ページ設定
 st.set_page_config(
@@ -122,7 +123,7 @@ def main():
     # メインコンテンツ
     if selected_ticker:
         # タブを作成
-        tab1, tab2 = st.tabs(["📈 株価分析", "💰 財務分析"])
+        tab1, tab2, tab3 = st.tabs(["📈 株価分析", "💰 財務分析", "💎 配当分析"])
         
         with tab1:
             # データの完全性をチェック
@@ -339,6 +340,80 @@ def main():
                 if financial_ratios is not None and not financial_ratios.empty:
                     st.markdown("**財務比率**")
                     st.dataframe(financial_ratios, width='stretch', height=300)
+        
+        with tab3:
+            # 配当分析タブ
+            st.markdown("### 💎 配当分析")
+            
+            # 配当データを読み込み
+            with st.spinner("配当データを読み込み中..."):
+                dividend_data = data_loader.load_dividend_data(selected_ticker)
+                dividend_analysis = data_loader.load_dividend_analysis(selected_ticker)
+            
+            # データ品質の表示
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                DividendAnalysis.display_data_quality_warning(dividend_data, "配当データ")
+            
+            with col2:
+                DividendAnalysis.display_data_quality_warning(dividend_analysis, "配当分析")
+            
+            # 配当サマリー
+            if dividend_analysis is not None and not dividend_analysis.empty:
+                st.markdown("#### 📊 配当サマリー")
+                DividendAnalysis.display_dividend_summary(dividend_analysis, dividend_data)
+            
+            # 配当履歴チャート
+            if dividend_data is not None and not dividend_data.empty:
+                st.markdown("#### 📈 配当履歴")
+                dividend_timeline_chart = DividendAnalysis.create_dividend_timeline_chart(
+                    dividend_data,
+                    title=f"{selected_ticker} 配当履歴",
+                    height=500
+                )
+                st.plotly_chart(dividend_timeline_chart, use_container_width=True)
+            
+            # 配当利回りチャート
+            if dividend_data is not None and not dividend_data.empty and stock_data is not None and not stock_data.empty:
+                st.markdown("#### 💰 配当利回り推移")
+                dividend_yield_chart = DividendAnalysis.create_dividend_yield_chart(
+                    dividend_data,
+                    stock_data,
+                    title=f"{selected_ticker} 配当利回り推移",
+                    height=500
+                )
+                st.plotly_chart(dividend_yield_chart, use_container_width=True)
+            
+            # 配当成長率チャート
+            if dividend_data is not None and not dividend_data.empty:
+                st.markdown("#### 📊 配当成長率")
+                dividend_growth_chart = DividendAnalysis.create_dividend_growth_chart(
+                    dividend_data,
+                    title=f"{selected_ticker} 配当成長率",
+                    height=400
+                )
+                st.plotly_chart(dividend_growth_chart, use_container_width=True)
+            
+            # 配当一貫性チャート
+            if dividend_data is not None and not dividend_data.empty:
+                st.markdown("#### 🎯 配当の一貫性")
+                dividend_consistency_chart = DividendAnalysis.create_dividend_consistency_chart(
+                    dividend_data,
+                    title=f"{selected_ticker} 配当の一貫性",
+                    height=400
+                )
+                st.plotly_chart(dividend_consistency_chart, use_container_width=True)
+            
+            # 配当データの詳細表示
+            with st.expander("📋 配当データ詳細"):
+                if dividend_data is not None and not dividend_data.empty:
+                    st.markdown("**配当履歴**")
+                    st.dataframe(dividend_data, width='stretch', height=300)
+                
+                if dividend_analysis is not None and not dividend_analysis.empty:
+                    st.markdown("**配当分析**")
+                    st.dataframe(dividend_analysis, width='stretch', height=300)
     
     else:
         st.info("サイドバーから銘柄を選択してください")
