@@ -154,7 +154,15 @@ def main():
                 stock_data = data_loader.load_stock_data(selected_ticker)
                 company_info = data_loader.load_company_info(selected_ticker)
                 technical_data = data_loader.load_technical_indicators(selected_ticker)
-        
+            
+            # デバッグ情報を表示
+            if stock_data is None:
+                st.error("株価データの読み込みに失敗しました")
+            elif stock_data.empty:
+                st.error("株価データが空です")
+            else:
+                st.success(f"株価データを読み込みました: {len(stock_data)}件のデータ")
+            
             if stock_data is not None and not stock_data.empty:
                 # 日付範囲でフィルタリング
                 if use_date_range and start_date and end_date:
@@ -239,13 +247,13 @@ def main():
                         
                         st.plotly_chart(technical_chart, use_container_width=True)
                 
-                    # データテーブル
-                    with st.expander("📋 詳細データ"):
-                        st.dataframe(
-                            stock_data.tail(20),
-                            width='stretch',
-                            height=400
-                        )
+                # データテーブル
+                with st.expander("📋 詳細データ"):
+                    st.dataframe(
+                        stock_data.tail(20),
+                        width='stretch',
+                        height=400
+                    )
             
             else:
                 st.error(f"銘柄 {selected_ticker} のデータが見つかりませんでした")
